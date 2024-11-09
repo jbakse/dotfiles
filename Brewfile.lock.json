@@ -1,0 +1,131 @@
+{
+  "entries": {
+    "tap": {
+      "homebrew/bundle": {
+        "revision": "bb8ff046665f91ff4d55d11bcc4cf317a5d47d27"
+      }
+    },
+    "cask": {
+      "1password": {
+        "version": "8.10.50",
+        "options": {
+          "full_name": "1password"
+        }
+      },
+      "cameracontroller": {
+        "version": "1.4.0",
+        "options": {
+          "full_name": "cameracontroller"
+        }
+      },
+      "discord": {
+        "version": "0.0.324",
+        "options": {
+          "full_name": "discord"
+        }
+      },
+      "google-chrome": {
+        "version": "130.0.6723.117",
+        "options": {
+          "full_name": "google-chrome"
+        }
+      },
+      "iterm2": {
+        "version": "3.5.6",
+        "options": {
+          "full_name": "iterm2"
+        }
+      },
+      "jumpcut": {
+        "version": "0.84",
+        "options": {
+          "full_name": "jumpcut"
+        }
+      },
+      "slack": {
+        "version": "4.41.97",
+        "options": {
+          "full_name": "slack"
+        }
+      },
+      "spotify": {
+        "version": "1.2.49.439",
+        "options": {
+          "full_name": "spotify"
+        }
+      },
+      "steam": {
+        "version": "4.0",
+        "options": {
+          "full_name": "steam"
+        }
+      },
+      "visual-studio-code": {
+        "version": "1.95.2",
+        "options": {
+          "full_name": "visual-studio-code"
+        }
+      },
+      "zoom": {
+        "version": "6.2.6.41824",
+        "options": {
+          "full_name": "zoom"
+        }
+      },
+      "elgato-control-center": {
+        "version": "1.7.2,20533",
+        "options": {
+          "full_name": "elgato-control-center"
+        }
+      },
+      "anki": {
+        "version": "24.06.3",
+        "options": {
+          "full_name": "anki"
+        }
+      },
+      "affinity-photo": {
+        "version": "2.5.5,2636",
+        "options": {
+          "full_name": "affinity-photo"
+        }
+      },
+      "affinity-designer": {
+        "version": "2.5.5,2636",
+        "options": {
+          "full_name": "affinity-designer"
+        }
+      },
+      "affinity-publisher": {
+        "version": "2.5.5,2636",
+        "options": {
+          "full_name": "affinity-publisher"
+        }
+      },
+      "daisydisk": {
+        "version": "4.30",
+        "options": {
+          "full_name": "daisydisk"
+        }
+      },
+      "appcleaner": {
+        "version": "3.6.8",
+        "options": {
+          "full_name": "appcleaner"
+        }
+      }
+    }
+  },
+  "system": {
+    "macos": {
+      "sequoia": {
+        "HOMEBREW_VERSION": "4.4.4",
+        "HOMEBREW_PREFIX": "/opt/homebrew",
+        "Homebrew/homebrew-core": "api",
+        "CLT": "16.1.0.0.1.1729049160",
+        "Xcode": "16.0",
+        "macOS": "15.1"
+      }
+    }
+  }
+}

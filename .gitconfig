@@ -1,0 +1,7 @@
+[user]
+	name = Justin Bakse
+	email = justin@tsfim.com
+[init]
+	defaultBranch = main
+[core]
+	editor = code --wait

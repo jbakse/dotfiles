@@ -1,0 +1,31 @@
+{
+  "recommendations": [
+    "github.copilot",
+    "github.copilot-chat",
+    "ms-vsliveshare.vsliveshare",
+    "aaron-bond.better-comments",
+    "christian-kohler.npm-intellisense",
+    "danlevett.regex-robin",
+    "eamodio.gitlens",
+    "esbenp.prettier-vscode",
+    "fabiospampinato.vscode-todo-plus",
+    "yzhang.markdown-all-in-one",
+    "ionutvmi.path-autocomplete",
+    "mechatroner.rainbow-csv",
+    "mikestead.dotenv",
+    "mkxml.vscode-filesize",
+    "redhat.vscode-xml",
+    "ritwickdey.liveserver",
+    "streetsidesoftware.code-spell-checker",
+    "yoavbls.pretty-ts-errors"
+    // "tamasfe.even-better-toml",
+    // "dbaeumer.vscode-eslint",
+    // "denoland.vscode-deno",
+    // "mohammadbaqer.better-folding",
+    // "orta.vscode-jest",
+    // "planbcoding.vscode-react-refactor",
+    // "prisma.prisma",
+    // "slevesque.shader",
+    // "stivo.tailwind-fold",
+  ]
+}
