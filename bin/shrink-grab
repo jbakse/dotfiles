@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# re-encode MacOS screen recordings to be smaller, still good looking
+
+infile=$1
+outfile=${infile%.mov}.mp4
+
+# Check if the input file is provided
+if [[ -z "$infile" ]]; then
+  echo "Usage: $0 <input_file.mov>"
+  exit 1
+fi
+
+# Check if the input file has a .mov extension
+if [[ ${infile##*.} != "mov" ]]; then
+  echo "Error: Input file must have a .mov extension."
+  exit 1
+fi
+
+# Check if the input file exists
+if [[ ! -f "$infile" ]]; then
+  echo "Error: File '$infile' not found."
+  exit 1
+fi
+
+echo -e "\033[37;40m shrink-grab \033[0m"
+echo "Encoding '$infile' -> '$outfile'"
+
+# Run ffmpeg to re-encode the input file
+ffmpeg -i "$infile" \
+  -hide_banner \
+  -preset fast \
+  -c:v libx264 \
+  -b:v 1000k \
+  -r 30 \
+  -crf 23 \
+  -vf scale=3840:-1 \
+  -c:a copy \
+  -f mp4 \
+  "$outfile" >/dev/null
+
+# Check if ffmpeg completed successfully
+if [[ $? -eq 0 ]]; then
+  infile_size=$(stat -f%z "$infile")
+  outfile_size=$(stat -f%z "$outfile")
+  percent=$(echo "scale=2; $outfile_size / $infile_size * 100" | bc)
+  infile_size_MB=$(echo "scale=2; $infile_size / 1024 / 1024" | bc)
+  outfile_size_MB=$(echo "scale=2; $outfile_size / 1024 / 1024" | bc)
+
+
+  echo -e "\033[37;40m report \033[0m"
+  echo "${infile_size_MB} MB -> ${outfile_size_MB} MB — $percent%"
+  
+else
+  echo "Error: Encoding failed."
+fi

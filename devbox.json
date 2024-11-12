@@ -5,7 +5,8 @@
     "zoxide@latest",
     "fzf@latest",
     "tldr@latest",
-    "bat@latest"
+    "bat@latest",
+    "ffmpeg@latest"
   ],
   "shell": {
     "init_hook": [

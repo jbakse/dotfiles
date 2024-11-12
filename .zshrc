@@ -29,6 +29,9 @@ fh() {
 #/ shell
 alias reload!='. ~/.zshrc'
 
+# add dotfiles/bin to front of path
+export PATH="$HOME/dotfiles/bin:$PATH"
+
 #/ welcome message
 echo
 echo -e "\033[1;37;40m Hello, .zshrc! \033[0m"
