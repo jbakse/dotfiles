@@ -21,10 +21,14 @@ alias more='bat'
 #/ fzf - fuzzy filter
 # https://github.com/junegunn/fzf/wiki/examples#command-history
 
+source <(fzf --zsh)
+
 # fuzzy search history
 fh() {
   print -z $( ([ -n "$ZSH_NAME" ] && fc -l 1 || history) | fzf +s --tac | sed -E 's/ *[0-9]*\*? *//' | sed -E 's/\\/\\\\/g')
 }
+
+alias browse='fzf --preview "bat --style=numbers --color=always --line-range :500 {}"'
 
 #/ shell
 alias reload!='. ~/.zshrc'
@@ -35,4 +39,4 @@ export PATH="$HOME/dotfiles/bin:$PATH"
 #/ welcome message
 echo
 echo -e "\033[1;37;40m Hello, .zshrc! \033[0m"
-echo
+echo "hints: ctrl-t, ctrl-r, fd, fh, browse, reload!"
