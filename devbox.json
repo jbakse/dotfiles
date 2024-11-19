@@ -6,7 +6,9 @@
     "fzf@latest",
     "tldr@latest",
     "bat@latest",
-    "ffmpeg@latest"
+    "ffmpeg@latest",
+    "deno@latest",
+    "fd@latest"
   ],
   "shell": {
     "init_hook": [

@@ -19,4 +19,8 @@ cask "affinity-publisher"
 cask "daisydisk"
 cask "appcleaner"
 cask "font-monaspace-nerd-font"
+cask "monitorcontrol"
+
+
+
 

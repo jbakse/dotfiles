@@ -49,6 +49,54 @@
         }
       }
     },
+    "deno@latest": {
+      "last_modified": "2024-11-16T04:25:12Z",
+      "resolved": "github:NixOS/nixpkgs/34a626458d686f1b58139620a8b2793e9e123bba#deno",
+      "source": "devbox-search",
+      "version": "2.0.6",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/6n6y9z422k9a0hzq18j1lzr3nm5qq42k-deno-2.0.6",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/6n6y9z422k9a0hzq18j1lzr3nm5qq42k-deno-2.0.6"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/8j2r58igcynz38grfyp6q6if3r4bh6p5-deno-2.0.6",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/8j2r58igcynz38grfyp6q6if3r4bh6p5-deno-2.0.6"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/gavar9qq7yn6yl77b53ci6zj54al4wan-deno-2.0.6",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/gavar9qq7yn6yl77b53ci6zj54al4wan-deno-2.0.6"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/96j40h3bygf3633yvqn6pl163lfv1064-deno-2.0.6",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/96j40h3bygf3633yvqn6pl163lfv1064-deno-2.0.6"
+        }
+      }
+    },
     "exa@latest": {
       "last_modified": "2023-09-06T20:35:33Z",
       "resolved": "github:NixOS/nixpkgs/efd23a1c9ae8c574e2ca923c2b2dc336797f4cc4#exa",
@@ -114,6 +162,54 @@
             }
           ],
           "store_path": "/nix/store/9rcc6z61paivss0g7d96izw7zqmg21gx-exa-unstable-2023-03-01"
+        }
+      }
+    },
+    "fd@latest": {
+      "last_modified": "2024-11-16T04:25:12Z",
+      "resolved": "github:NixOS/nixpkgs/34a626458d686f1b58139620a8b2793e9e123bba#fd",
+      "source": "devbox-search",
+      "version": "10.2.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/82v1i8k638rvnmk9p77wv3b6c9phvndh-fd-10.2.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/82v1i8k638rvnmk9p77wv3b6c9phvndh-fd-10.2.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/8kaw3m5if6d0hc6bj0m4j9kajarn405b-fd-10.2.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/8kaw3m5if6d0hc6bj0m4j9kajarn405b-fd-10.2.0"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/q9b9c6ws3jy3giq9jmgk4f5xbyls1cnq-fd-10.2.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/q9b9c6ws3jy3giq9jmgk4f5xbyls1cnq-fd-10.2.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/s8ml0x4zl7xla2crsx2427cxz6lyypzp-fd-10.2.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/s8ml0x4zl7xla2crsx2427cxz6lyypzp-fd-10.2.0"
         }
       }
     },

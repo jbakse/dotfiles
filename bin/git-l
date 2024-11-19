@@ -1,0 +1,5 @@
+#!/bin/zsh
+
+git log --all --pretty=oneline --pretty=format:"%Cgreen%h%Creset %s %Cred%d%Creset" --color=always | fzf --ansi --preview 'git show --pretty=medium --color=always $(echo {} | cut -d" " -f1)' | cut -d" " -f1
+
+# https://news.ycombinator.com/item?id=38679946
