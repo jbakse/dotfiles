@@ -1,14 +1,17 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.13.6/.schema/devbox.schema.json",
   "packages": [
-    "exa@latest",
+    "eza@latest",
     "zoxide@latest",
     "fzf@latest",
     "tldr@latest",
     "bat@latest",
     "ffmpeg@latest",
     "deno@latest",
-    "fd@latest"
+    "fd@latest",
+    "ncdu@latest",
+    "github:sadjow/claude-code-nix",
+    "nodejs@24"
   ],
   "shell": {
     "init_hook": [

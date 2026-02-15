@@ -18,7 +18,6 @@ ZSH_THEME="robbyrussell"
 plugins=(
     zsh-syntax-highlighting
     zsh-autosuggestions
-    colored-man-pages
 )
 
 source $ZSH/oh-my-zsh.sh

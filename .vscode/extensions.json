@@ -1,6 +1,7 @@
 {
   // these are extension i use often
   // i'm putting them here for quick reference for their ids
+  // though this document doesn't do anything, it is a template reference for me to quickly find the extension ids when i need to install them in a new vscode instance
   "recommendations": [
     // "github.copilot",
     // "github.copilot-chat",
@@ -20,7 +21,6 @@
     // "ritwickdey.liveserver",
     // "streetsidesoftware.code-spell-checker",
     // "yoavbls.pretty-ts-errors"
-
     // "tamasfe.even-better-toml",
     // "dbaeumer.vscode-eslint",
     // "denoland.vscode-deno",

@@ -7,9 +7,9 @@ eval "$(devbox global shellenv)"
 #/ oh my zsh 
 source ~/dotfiles/ohmyzsh.zsh
 
-#/ exa - modern replacement for ls
-alias ls='exa -alF --git'
-alias lst='exa -lFT --git'
+#/ eza - modern replacement for ls
+alias ls='eza -alF --git'
+alias lst='eza -lFT --git'
 
 #/ zoxide - jump around directories
 eval "$(zoxide init zsh)"
@@ -17,26 +17,28 @@ eval "$(zoxide init zsh)"
 #/ bat
 alias less='bat'
 alias more='bat'
+export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 
 #/ fzf - fuzzy filter
-# https://github.com/junegunn/fzf/wiki/examples#command-history
-
 source <(fzf --zsh)
 
-# fuzzy search history
-fh() {
-  print -z $( ([ -n "$ZSH_NAME" ] && fc -l 1 || history) | fzf +s --tac | sed -E 's/ *[0-9]*\*? *//' | sed -E 's/\\/\\\\/g')
-}
-
 alias browse='fzf --preview "bat --style=numbers --color=always --line-range :500 {}"'
+
+#/ fd
+
+alias big='fd --type f -0 | xargs -0 du -h | sort -rh | head -n 10'
 
 #/ shell
 alias reload!='. ~/.zshrc'
 
-# add dotfiles/bin to front of path
+#/ PATH
 export PATH="$HOME/dotfiles/bin:$PATH"
+export PATH="$HOME/.npm/bin:$PATH"
+export PATH="$HOME/.deno/bin:$PATH"
+export PATH="$HOME/.cache/lm-studio/bin:$PATH"
+export PATH="/Applications/Aseprite.app/Contents/MacOS:$PATH"
 
 #/ welcome message
 echo
 echo -e "\033[1;37;40m Hello, .zshrc! \033[0m"
-echo "hints: ctrl-t, ctrl-r, fd, fh, browse, reload!"
+echo "hints: ctrl-t, ctrl-r, fd, browse, reload!"
