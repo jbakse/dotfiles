@@ -1,0 +1,209 @@
+#!/bin/zsh
+
+# git-clean-branches
+# Safely removes local and remote feature branches that are fully merged
+# into main. Shows a summary first and asks before deleting anything.
+#
+# Detection methods:
+#   commit-merged  — branch commits are ancestors of main (normal merge)
+#   100% content-merged — squash/rebase merge, exact patch match
+#   N% content-merged — most of the branch diff is already in main
+#
+# Partially content-merged branches are prompted one at a time.
+
+set -euo pipefail
+
+# -- configuration ----------------------------------------------------------
+
+main_branch="main"
+partial_threshold=50  # minimum % to flag as partially merged
+
+# -- helpers ----------------------------------------------------------------
+
+# ANSI colors
+green="\033[32m"
+red="\033[31m"
+yellow="\033[33m"
+cyan="\033[36m"
+bold="\033[1m"
+reset="\033[0m"
+
+# Count total added+removed lines in a git diff
+diff_line_count() {
+  git diff --numstat "$1".."$2" 2>/dev/null \
+    | awk '{ added += $1; removed += $2 } END { print added + removed + 0 }'
+}
+
+# Delete a branch locally and on the remote
+delete_branch() {
+  local branch=$1 flag=$2
+
+  if git branch "$flag" "$branch" &>/dev/null; then
+    echo -e "  ${green}deleted local${reset}   $branch"
+  else
+    echo -e "  ${red}failed local${reset}   $branch"
+  fi
+
+  if git ls-remote --exit-code --heads origin "$branch" &>/dev/null; then
+    if git push origin --delete "$branch" &>/dev/null; then
+      echo -e "  ${green}deleted remote${reset}  $branch"
+    else
+      echo -e "  ${red}failed remote${reset}  $branch"
+    fi
+  fi
+}
+
+# -- preflight checks -------------------------------------------------------
+
+# Make sure we're in a git repo
+if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+  echo -e "${red}error:${reset} not a git repository"
+  exit 1
+fi
+
+# Make sure the main branch exists locally
+if ! git show-ref --verify --quiet "refs/heads/$main_branch"; then
+  echo -e "${red}error:${reset} branch '$main_branch' not found"
+  exit 1
+fi
+
+# Fetch latest remote state so merged-branch detection is up to date
+echo -e "${cyan}Fetching latest from remote...${reset}"
+git fetch --prune 2>/dev/null || true
+
+# -- gather branch info -----------------------------------------------------
+
+# All local branches except main
+raw_all=$(git branch --format='%(refname:short)' | grep -v "^${main_branch}$" || true)
+
+if [[ -z "$raw_all" ]]; then
+  echo -e "\n${green}No feature branches found. Nothing to clean up.${reset}"
+  exit 0
+fi
+
+all_branches=("${(@f)raw_all}")
+
+# 1) Commit-merged: branch commits are ancestors of main
+raw_merged=$(git branch --merged "$main_branch" --format='%(refname:short)' | grep -v "^${main_branch}$" || true)
+if [[ -n "$raw_merged" ]]; then
+  commit_merged=("${(@f)raw_merged}")
+else
+  commit_merged=()
+fi
+
+# 2) Content-merged: squash/rebase detection via patch comparison
+#    Also compute % merged for branches that aren't exact matches
+typeset -A content_pct  # branch -> percentage
+content_full=()         # 100% content-merged
+content_partial=()      # partially content-merged (above threshold)
+
+for branch in "${all_branches[@]}"; do
+  # Skip branches already detected as commit-merged
+  if (( ${commit_merged[(Ie)$branch]} )); then
+    continue
+  fi
+
+  merge_base=$(git merge-base "$main_branch" "$branch" 2>/dev/null) || continue
+
+  # Exact match: create a squash commit and check via git cherry
+  squash_commit=$(git commit-tree "$branch^{tree}" -p "$merge_base" -m "temp" 2>/dev/null) || continue
+  cherry=$(git cherry "$main_branch" "$squash_commit" 2>/dev/null) || continue
+  if [[ "$cherry" == "-"* ]]; then
+    content_full+=("$branch")
+    content_pct[$branch]=100
+    continue
+  fi
+
+  # Fuzzy match: compare how much of the branch diff remains vs main
+  branch_changes=$(diff_line_count "$merge_base" "$branch")
+  remaining_diff=$(diff_line_count "$main_branch" "$branch")
+
+  if [[ "$branch_changes" -eq 0 ]]; then
+    continue
+  fi
+
+  pct=$(( (branch_changes - remaining_diff) * 100 / branch_changes ))
+  if (( pct < 0 )); then pct=0; fi
+
+  if (( pct >= partial_threshold )); then
+    content_partial+=("$branch")
+    content_pct[$branch]=$pct
+  fi
+done
+
+# Fully merged = commit-merged + 100% content-merged
+fully_merged=("${commit_merged[@]}" "${content_full[@]}")
+
+# -- display summary --------------------------------------------------------
+
+echo
+echo -e "${bold}Branch summary${reset} (compared to ${cyan}${main_branch}${reset}):"
+echo
+
+current_branch=$(git branch --show-current)
+for branch in "${all_branches[@]}"; do
+  current_mark=""
+  if [[ "$branch" == "$current_branch" ]]; then
+    current_mark="*"
+  fi
+
+  col2=""
+  col3=""
+  if (( ${commit_merged[(Ie)$branch]} )); then
+    col2="${green}commit-merged${reset}"
+  fi
+  if (( ${content_full[(Ie)$branch]} )); then
+    col3="${green}100% content-merged${reset}"
+  elif (( ${content_partial[(Ie)$branch]} )); then
+    col3="${yellow}${content_pct[$branch]}% content-merged${reset}"
+  fi
+
+  printf "  %-20s  %-13b  %b\n" "${branch}${current_mark}" "$col2" "$col3"
+done
+
+echo
+
+# -- prompt: fully merged branches ------------------------------------------
+
+if [[ ${#fully_merged[@]} -gt 0 ]]; then
+  # Check if we're on a branch that would be deleted
+  if (( ${fully_merged[(Ie)$current_branch]} )); then
+    echo -e "${yellow}You are on ${cyan}${current_branch}${yellow}, which is fully merged. Switch to ${cyan}${main_branch}${yellow} first.${reset}"
+  else
+    echo -e "${bold}Delete fully merged branches?${reset}"
+    for branch in "${fully_merged[@]}"; do
+      echo -e "  ${red}$branch${reset}"
+    done
+    echo
+    read -q "confirm?Delete these branches? [y/N] " || true
+    echo
+    if [[ "$confirm" == "y" ]]; then
+      echo
+      for branch in "${fully_merged[@]}"; do
+        flag="-d"
+        if (( ${content_full[(Ie)$branch]} )); then
+          flag="-D"
+        fi
+        delete_branch "$branch" "$flag"
+      done
+      echo
+    fi
+  fi
+fi
+
+# -- prompt: partially merged branches (one at a time) ---------------------
+
+for branch in "${content_partial[@]}"; do
+  if [[ "$branch" == "$current_branch" ]]; then
+    echo -e "${yellow}Skipping ${cyan}${branch}${yellow} (current branch).${reset}"
+    continue
+  fi
+  read -q "confirm?Delete ${branch} (${content_pct[$branch]}% content-merged)? [y/N] " || true
+  echo
+  if [[ "$confirm" == "y" ]]; then
+    delete_branch "$branch" "-D"
+    echo
+  fi
+done
+
+echo -e "${green}Done.${reset}"
