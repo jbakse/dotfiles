@@ -1,0 +1,142 @@
+#!/bin/bash
+
+# turn the screenshot-sweep launchd agent on or off
+#
+# usage: screenshot-watch on|off|status|log [-f]|help
+
+LABEL=com.jbakse.screenshot-sweep
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+DIR="$HOME/Screenshots"
+STATE="$HOME/.local/state/screenshot-sweep"
+LOG="$HOME/Library/Logs/screenshot-sweep.log"
+SWEEP="$HOME/dotfiles/bin/screenshot-sweep"
+DOMAIN="gui/$(id -u)"
+
+# macOS tools, not GNU ones a devbox shell may put first
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+
+loaded() { launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; }
+
+bold=$'\033[1m' dim=$'\033[2m' reset=$'\033[0m'
+head=$'\033[1;36m' green=$'\033[1;32m' red=$'\033[31m'
+
+# "2026-09-30 16:41:18 created details" -> "Sep 30 4:41 PM  created   details"
+format_log() {
+  while read -r day time event details; do
+    when=$(date -j -f '%Y-%m-%d %H:%M:%S' "$day $time" '+%b %-d %-I:%M %p' 2>/dev/null)
+    color=""
+    [[ $event == error || $event == failed ]] && color=$red
+    printf "${dim}%-15s${reset} ${color}%-9s${reset} %s\n" "$when" "$event" "$details"
+  done
+}
+
+help() {
+  cat <<EOF
+
+${bold}screenshot-watch${reset} — auto-compress screen recordings in ${DIR/#$HOME/~}
+
+  • makes ${bold}name_compressed.mp4${reset} for each new recording, same size and frame rate
+  • if that's over 10 MB, also makes ${bold}name_discord.mp4${reset} to fit Discord's free limit (30fps)
+  • moves the original to the Trash 30 minutes after it's compressed
+  • deletes the _discord copy after 24 hours
+  • only handles recordings made after \`on\`; run \`screenshot-sweep --all\` for older ones
+
+${head}usage${reset}
+  screenshot-watch on         start watching
+  screenshot-watch off        stop watching
+  screenshot-watch status     on/off and recent activity
+  screenshot-watch log [-f]   full log, -f to follow
+  screenshot-sweep --dry-run  show what a sweep would do
+
+EOF
+}
+
+status() {
+  echo
+  if loaded; then
+    echo "screenshot-watch is ${green}ON${reset}"
+    echo
+    echo "${dim}watching:${reset} ${DIR/#$HOME/~}"
+    [[ -e "$STATE/since" ]] && echo "${dim}on since:${reset} $(date -r "$(cat "$STATE/since")" '+%b %-d %-I:%M %p')"
+  else
+    echo "screenshot-watch is ${bold}OFF${reset}"
+  fi
+
+  if [[ -s "$LOG" ]]; then
+    echo
+    echo "${head}recent${reset}"
+    tail -n 10 "$LOG" | format_log
+  fi
+  echo
+}
+
+case $1 in
+  on)
+    mkdir -p "$STATE" "$(dirname "$PLIST")"
+    # only videos from now on, not ones made while it was off;
+    # use `screenshot-sweep --all` to catch up on older ones
+    date +%s >"$STATE/since"
+
+    cat >"$PLIST" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>$LABEL</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>$SWEEP</string>
+  </array>
+  <key>WatchPaths</key>
+  <array>
+    <string>$DIR</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>600</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>StandardErrorPath</key>
+  <string>$LOG</string>
+</dict>
+</plist>
+EOF
+
+    loaded && launchctl bootout "$DOMAIN/$LABEL"
+    launchctl bootstrap "$DOMAIN" "$PLIST"
+    status
+    ;;
+
+  off)
+    loaded && launchctl bootout "$DOMAIN/$LABEL"
+    rm -f "$PLIST"
+    status
+    ;;
+
+  status)
+    status
+    ;;
+
+  log)
+    touch "$LOG"
+    if [[ $2 == -f ]]; then
+      tail -n 10 -f "$LOG" | format_log
+    else
+      format_log <"$LOG"
+    fi
+    ;;
+
+  help | -h | --help)
+    help
+    ;;
+
+  *)
+    help
+    exit 1
+    ;;
+esac

@@ -1,0 +1,221 @@
+#!/bin/bash
+
+# compress screen recordings in the screenshots folder
+#
+# for each new video:
+#   name_compressed.mp4  always, same dimensions and frame rate, reasonable bitrate
+#   name_discord.mp4     only if _compressed is over the discord limit, 30fps
+#   original             moved to trash 30 min after _compressed is verified
+#   _discord             deleted 24 hours after it was made
+#
+# safe to run any number of times; state comes from the files themselves.
+# normally run by launchd (see screenshot-watch), can be run by hand.
+#
+# usage: screenshot-sweep [--all] [--dry-run]
+#   --all      also process videos from before the watcher was turned on
+#   --dry-run  show what would happen, change nothing
+
+#/ config (env vars override, handy for testing)
+DIR="${SCREENSHOT_DIR:-$HOME/Screenshots}"
+STATE="${SCREENSHOT_STATE:-$HOME/.local/state/screenshot-sweep}"
+LOG="${SCREENSHOT_LOG:-$HOME/Library/Logs/screenshot-sweep.log}"
+DISCORD_LIMIT=10000000   # bytes, discord free upload cap
+DISCORD_TARGET=9500000   # bytes, aim a little under the cap
+MIN_DISCORD_KBPS=150     # below this the video is mush, don't bother
+ORIGINAL_DELAY=$((30 * 60))
+DISCORD_DELAY=$((24 * 60 * 60))
+
+# macOS tools first (stat -f, date -r), then devbox for ffmpeg
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/share/devbox/global/default/.devbox/nix/profile/default/bin:/opt/homebrew/bin"
+
+all=false
+dry=false
+for arg in "$@"; do
+  case $arg in
+    --all) all=true ;;
+    --dry-run) dry=true ;;
+    *) echo "usage: $0 [--all] [--dry-run]"; exit 1 ;;
+  esac
+done
+
+mkdir -p "$STATE/failed" "$STATE/expired" "$(dirname "$LOG")"
+
+# log event details -> "2026-09-30 16:41:18 created foo_compressed.mp4 ..."
+log() {
+  local line="$(date '+%Y-%m-%d %H:%M:%S') $1 $2"
+  if $dry; then
+    echo "$line (dry run)"
+    return 0
+  fi
+  echo "$line" >>"$LOG"
+  if [[ -t 1 ]]; then echo "$line"; fi
+  return 0
+}
+
+#/ one sweep at a time
+if ! mkdir "$STATE/lock" 2>/dev/null; then
+  pid=$(cat "$STATE/lock/pid" 2>/dev/null)
+  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+    exit 0
+  fi
+  # stale lock from a crashed run
+  rm -rf "$STATE/lock"
+  mkdir "$STATE/lock" || exit 1
+fi
+echo $$ >"$STATE/lock/pid"
+# last-run holds "time exit-code" for screenshot-watch status
+trap 'code=$?; rm -rf "$STATE/lock"; $dry || echo "$(date +%s) $code" >"$STATE/last-run"' EXIT
+
+if ! ls "$DIR" >/dev/null 2>&1; then
+  log "error" "can't read $DIR"
+  exit 1
+fi
+
+since=0
+$all || since=$(cat "$STATE/since" 2>/dev/null || echo 0)
+
+now() { date +%s; }
+mtime() { stat -f %m "$1"; }
+age() { echo $(($(now) - $(mtime "$1"))); }
+size() { stat -f %z "$1"; }
+mb() { awk -v b="$1" 'BEGIN { printf "%.1f", b / 1000000 }'; }
+
+duration() {
+  ffprobe -v error -show_entries format=duration -of csv=p=0 "$1" 2>/dev/null
+}
+
+has_audio() {
+  [[ -n $(ffprobe -v error -select_streams a -show_entries stream=index -of csv=p=0 "$1" 2>/dev/null) ]]
+}
+
+# output exists and is as long as the original (within a second)
+verified() {
+  local a b
+  a=$(duration "$1")
+  b=$(duration "$2")
+  [[ -n "$a" && -n "$b" ]] && awk -v a="$a" -v b="$b" 'BEGIN { d = a - b; exit !(d < 1 && d > -1) }'
+}
+
+# yuv420p needs even dimensions; drop at most 1px rather than resample
+EVEN="crop=trunc(iw/2)*2:trunc(ih/2)*2"
+
+encode_compressed() {
+  ffmpeg -nostdin -hide_banner -loglevel error -y -i "$1" \
+    -vf "$EVEN" \
+    -c:v libx264 -preset medium -crf 26 -pix_fmt yuv420p \
+    -c:a aac -b:a 128k \
+    -movflags +faststart \
+    "$2"
+}
+
+encode_discord() {
+  local in=$1 out=$2 kbps=$3 passlog="$STATE/pass-$$"
+  ffmpeg -nostdin -hide_banner -loglevel error -y -i "$in" \
+    -vf "$EVEN" -fpsmax 30 \
+    -c:v libx264 -preset medium -b:v "${kbps}k" -pix_fmt yuv420p \
+    -pass 1 -passlogfile "$passlog" -an -f mp4 /dev/null &&
+    ffmpeg -nostdin -hide_banner -loglevel error -y -i "$in" \
+      -vf "$EVEN" -fpsmax 30 \
+      -c:v libx264 -preset medium -b:v "${kbps}k" -pix_fmt yuv420p \
+      -pass 2 -passlogfile "$passlog" \
+      -c:a aac -b:a 96k \
+      -movflags +faststart \
+      "$out"
+  local status=$?
+  rm -f "$passlog"*
+  return $status
+}
+
+# encode to a temp file, keep it only if it checks out
+# usage: produce kind original output encoder [encoder args]
+produce() {
+  local kind=$1 original=$2 out=$3 encoder=$4
+  shift 4
+  local tmp="${out%.mp4}.tmp.mp4"
+  local marker="$STATE/failed/$(basename "$out")"
+
+  [[ -e "$out" ]] && return 0
+  if [[ -e "$marker" ]]; then
+    return 1
+  fi
+
+  log "encoding" "$(basename "$out")"
+  $dry && return 1
+  worked=true
+
+  if "$encoder" "$original" "$tmp" "$@" && verified "$original" "$tmp"; then
+    mv "$tmp" "$out"
+    log "created" "$(basename "$out")  $(mb "$(size "$original")") MB -> $(mb "$(size "$out")") MB"
+  else
+    rm -f "$tmp"
+    touch "$marker"
+    log "failed" "$(basename "$out") — delete $marker to retry"
+    return 1
+  fi
+}
+
+process() {
+  local original=$1
+  local base="${original%.*}"
+  local compressed="${base}_compressed.mp4"
+  local discord="${base}_discord.mp4"
+
+  produce compressed "$original" "$compressed" encode_compressed || return
+
+  # discord version comes from the original to avoid compressing twice
+  # expired: made once and deleted after 24h, don't make it again
+  if (($(size "$compressed") > DISCORD_LIMIT)) && [[ ! -e "$discord" && ! -e "$STATE/expired/$(basename "$discord")" ]]; then
+    local dur audio=0 kbps
+    dur=$(duration "$original")
+    has_audio "$original" && audio=96
+    kbps=$(awk -v t="$DISCORD_TARGET" -v d="$dur" -v a="$audio" 'BEGIN { printf "%d", t * 8 / d / 1000 - a }')
+    if ((kbps < MIN_DISCORD_KBPS)); then
+      if [[ ! -e "$STATE/failed/$(basename "$discord")" ]]; then
+        log "skipped" "$(basename "$discord") — ${dur%.*}s is too long to fit in $(mb $DISCORD_LIMIT) MB"
+        $dry || touch "$STATE/failed/$(basename "$discord")"
+      fi
+    else
+      produce discord "$original" "$discord" encode_discord "$kbps"
+      # two-pass can overshoot on busy video; one retry scaled by the miss
+      if [[ -e "$discord" ]] && (($(size "$discord") > DISCORD_LIMIT)); then
+        kbps=$((kbps * DISCORD_TARGET / $(size "$discord")))
+        log "retrying" "$(basename "$discord") — $(mb "$(size "$discord")") MB is over the limit"
+        rm -f "$discord"
+        produce discord "$original" "$discord" encode_discord "$kbps"
+      fi
+    fi
+  fi
+
+  if (($(age "$compressed") > ORIGINAL_DELAY)); then
+    log "trashed" "$(basename "$original")"
+    $dry || trash "$original"
+  fi
+}
+
+sweep() {
+  while IFS= read -r -d '' file; do
+    case $file in
+      *_compressed.mp4 | *_discord.mp4 | *.tmp.mp4) continue ;;
+    esac
+    # `since` only decides what gets encoded for the first time; anything
+    # already compressed (e.g. by --all) still gets its discord copy and trash
+    if [[ ! -e "${file%.*}_compressed.mp4" ]] && (($(mtime "$file") < since)); then
+      continue
+    fi
+    process "$file"
+  done < <(find "$DIR" -maxdepth 1 -type f ! -name '.*' \( -iname '*.mov' -o -iname '*.mp4' \) -print0)
+
+  while IFS= read -r -d '' file; do
+    if (($(age "$file") > DISCORD_DELAY)); then
+      log "deleted" "$(basename "$file")"
+      $dry || { rm -f "$file" && touch "$STATE/expired/$(basename "$file")"; }
+    fi
+  done < <(find "$DIR" -maxdepth 1 -type f -name '*_discord.mp4' -print0)
+}
+
+# launchd drops triggers while we run, so look again after doing any work
+while true; do
+  worked=false
+  sweep
+  $worked || break
+done

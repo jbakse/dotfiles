@@ -65,6 +65,7 @@ echo -e " \033[1;36mscripts\033[0m"
 echo -e " \033[33mglog\033[0m           interactive git log with fzf"
 echo -e " \033[33mgclean\033[0m         delete branches merged into main"
 echo -e " \033[33mshrink-grab\033[0m         re-encode .mov screen recordings to .mp4"
+echo -e " \033[33mscreenshot-watch\033[0m on|off|status|log [-f] — auto-compress ~/Screenshots videos"
 echo
 echo -e " \033[1;36mtools\033[0m"
 echo -e " \033[33mtldr\033[0m           simplified man pages"
