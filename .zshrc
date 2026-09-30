@@ -71,3 +71,7 @@ echo -e " \033[33mtldr\033[0m           simplified man pages"
 echo -e " \033[33mfd\033[0m             modern find"
 echo -e " \033[33mncdu\033[0m           interactive disk usage"
 echo -e " \033[33magentsview\033[0m     review coding agent activity"
+# Added by LM Studio CLI (lms)
+export PATH="$PATH:/Users/jbakse/.cache/lm-studio/bin"
+# End of LM Studio CLI section
+

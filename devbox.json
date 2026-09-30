@@ -11,7 +11,8 @@
     "fd@latest",
     "ncdu@latest",
     "github:sadjow/claude-code-nix",
-    "nodejs@24"
+    "nodejs@24",
+    "gh@latest"
   ],
   "shell": {
     "init_hook": [

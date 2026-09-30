@@ -5,3 +5,15 @@
 	defaultBranch = main
 [core]
 	editor = code --wait
+[push]
+	autoSetupRemote = true
+[pull]
+	rebase = true
+[diff]
+	colorMoved = default
+[credential "https://github.com"]
+	helper = 
+	helper = !/Users/jbakse/.local/share/devbox/global/default/.devbox/nix/profile/default/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/Users/jbakse/.local/share/devbox/global/default/.devbox/nix/profile/default/bin/gh auth git-credential
