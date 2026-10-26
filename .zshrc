@@ -35,6 +35,9 @@ alias gclean='git-clean-branches'
 #/ shell
 alias reload!='. ~/.zshrc'
 
+#/ ai
+alias bf='butterfish shell -m gpt-6.1-sol'
+
 #/ PATH
 export PATH="$HOME/dotfiles/bin:$PATH"
 export PATH="$HOME/.npm/bin:$PATH"
@@ -60,6 +63,7 @@ echo -e " \033[33mbrowse\033[0m         fuzzy find files with bat preview"
 echo -e " \033[33mbig\033[0m            show 10 largest files in current tree"
 echo -e " \033[33mz <dir>\033[0m        jump to a directory (zoxide)"
 echo -e " \033[33mreload!\033[0m        re-source .zshrc"
+echo -e " \033[33mbf\033[0m             butterfish AI shell (gpt-6.1-sol)"
 echo
 echo -e " \033[1;36mscripts\033[0m"
 echo -e " \033[33mglog\033[0m           interactive git log with fzf"

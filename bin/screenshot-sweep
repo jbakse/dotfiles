@@ -15,6 +15,10 @@
 #   --all      also process videos from before the watcher was turned on
 #   --dry-run  show what would happen, change nothing
 
+# braces make bash read the whole file before running, so editing it
+# mid-sweep is safe
+{
+
 #/ config (env vars override, handy for testing)
 DIR="${SCREENSHOT_DIR:-$HOME/Screenshots}"
 STATE="${SCREENSHOT_STATE:-$HOME/.local/state/screenshot-sweep}"
@@ -64,7 +68,7 @@ if ! mkdir "$STATE/lock" 2>/dev/null; then
 fi
 echo $$ >"$STATE/lock/pid"
 # last-run holds "time exit-code" for screenshot-watch status
-trap 'code=$?; rm -rf "$STATE/lock"; $dry || echo "$(date +%s) $code" >"$STATE/last-run"' EXIT
+trap 'code=$?; rm -rf "$STATE/lock" "$STATE/current" "$STATE/progress" "$STATE/pass"; $dry || echo "$(date +%s) $code" >"$STATE/last-run"' EXIT
 
 if ! ls "$DIR" >/dev/null 2>&1; then
   log "error" "can't read $DIR"
@@ -99,10 +103,13 @@ verified() {
 # yuv420p needs even dimensions; drop at most 1px rather than resample
 EVEN="crop=trunc(iw/2)*2:trunc(ih/2)*2"
 
+# ffmpeg writes key=value progress here; screenshot-watch status reads it
+PROGRESS=(-progress "$STATE/progress")
+
 encode_compressed() {
-  ffmpeg -nostdin -hide_banner -loglevel error -y -i "$1" \
+  ffmpeg -nostdin -hide_banner -loglevel error "${PROGRESS[@]}" -y -i "$1" \
     -vf "$EVEN" \
-    -c:v libx264 -preset medium -crf 26 -pix_fmt yuv420p \
+    -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p \
     -c:a aac -b:a 128k \
     -movflags +faststart \
     "$2"
@@ -110,11 +117,13 @@ encode_compressed() {
 
 encode_discord() {
   local in=$1 out=$2 kbps=$3 passlog="$STATE/pass-$$"
-  ffmpeg -nostdin -hide_banner -loglevel error -y -i "$in" \
+  echo "1/2" >"$STATE/pass"
+  ffmpeg -nostdin -hide_banner -loglevel error "${PROGRESS[@]}" -y -i "$in" \
     -vf "$EVEN" -fpsmax 30 \
     -c:v libx264 -preset medium -b:v "${kbps}k" -pix_fmt yuv420p \
     -pass 1 -passlogfile "$passlog" -an -f mp4 /dev/null &&
-    ffmpeg -nostdin -hide_banner -loglevel error -y -i "$in" \
+    echo "2/2" >"$STATE/pass" &&
+    ffmpeg -nostdin -hide_banner -loglevel error "${PROGRESS[@]}" -y -i "$in" \
       -vf "$EVEN" -fpsmax 30 \
       -c:v libx264 -preset medium -b:v "${kbps}k" -pix_fmt yuv420p \
       -pass 2 -passlogfile "$passlog" \
@@ -143,7 +152,13 @@ produce() {
   $dry && return 1
   worked=true
 
-  if "$encoder" "$original" "$tmp" "$@" && verified "$original" "$tmp"; then
+  # name and duration in seconds, for screenshot-watch status
+  printf '%s\n%s\n' "$(basename "$out")" "$(duration "$original")" >"$STATE/current"
+  "$encoder" "$original" "$tmp" "$@"
+  local status=$?
+  rm -f "$STATE/current" "$STATE/progress" "$STATE/pass"
+
+  if ((status == 0)) && verified "$original" "$tmp"; then
     mv "$tmp" "$out"
     log "created" "$(basename "$out")  $(mb "$(size "$original")") MB -> $(mb "$(size "$out")") MB"
   else
@@ -219,3 +234,5 @@ while true; do
   sweep
   $worked || break
 done
+exit
+}

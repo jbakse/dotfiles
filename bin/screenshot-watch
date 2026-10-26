@@ -18,7 +18,7 @@ export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 loaded() { launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; }
 
 bold=$'\033[1m' dim=$'\033[2m' reset=$'\033[0m'
-head=$'\033[1;36m' green=$'\033[1;32m' red=$'\033[31m'
+head=$'\033[1;36m' green=$'\033[1;32m' red=$'\033[31m' yellow=$'\033[33m'
 
 # "2026-09-30 16:41:18 created details" -> "Sep 30 4:41 PM  created   details"
 format_log() {
@@ -60,6 +60,21 @@ status() {
     [[ -e "$STATE/since" ]] && echo "${dim}on since:${reset} $(date -r "$(cat "$STATE/since")" '+%b %-d %-I:%M %p')"
   else
     echo "screenshot-watch is ${bold}OFF${reset}"
+  fi
+
+  # written by screenshot-sweep while ffmpeg runs
+  if [[ -e "$STATE/current" ]]; then
+    { read -r name; read -r total; } <"$STATE/current"
+    us=$(grep '^out_time_us=' "$STATE/progress" 2>/dev/null | tail -n 1 | cut -d= -f2)
+    [[ $us =~ ^[0-9]+$ ]] || us=0
+    done_s=$((us / 1000000)) total_s=${total%.*}
+    pct=0
+    ((total_s > 0)) && pct=$((done_s * 100 / total_s))
+    pass=$(cat "$STATE/pass" 2>/dev/null)
+    echo
+    printf "${yellow}encoding${reset} %s  ${bold}%d%%${reset}  %d:%02d / %d:%02d%s\n" \
+      "$name" "$pct" $((done_s / 60)) $((done_s % 60)) $((total_s / 60)) $((total_s % 60)) \
+      "${pass:+  (pass $pass)}"
   fi
 
   if [[ -s "$LOG" ]]; then

@@ -1,4 +1,7 @@
 tap "homebrew/bundle"
+tap "bakks/bakks"
+
+brew "bakks/bakks/butterfish"
 
 cask "1password"
 cask "cameracontroller"
