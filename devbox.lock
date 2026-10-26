@@ -456,10 +456,6 @@
       "last_modified": "2026-09-29T03:29:29Z",
       "resolved": "github:NixOS/nixpkgs/b6c8664de9b6cc07fe5666a29f91884ba81197c4?lastModified=1790652569&narHash=sha256-641r7xrlSOHYoktL9%2FaArPIYNgZJ9eM5URzSEOtPJDY%3D"
     },
-    "github:sadjow/claude-code-nix": {
-      "last_modified": "2026-09-30T20:01:57Z",
-      "resolved": "github:sadjow/claude-code-nix/cf73bd2bece41565ca483050a3a7385ef3663aec?lastModified=1790798517&narHash=sha256-KUudJ87dsfhnM2LVa4QXJdrLSjCNbuWOLFZGtiDDrtE%3D"
-    },
     "ncdu@latest": {
       "last_modified": "2026-08-27T07:16:00Z",
       "resolved": "github:NixOS/nixpkgs/c27cdad491a991b11ed731760aa2ef8db0cb0410#ncdu",

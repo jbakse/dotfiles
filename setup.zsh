@@ -28,7 +28,11 @@ ln -sf ~/dotfiles/.gitconfig ~/.gitconfig
     
 # install Apps with Homebrew
 cd dotfiles
-brew bundle install 
+brew bundle install
+
+# install global npm tools (node comes from devbox; prefix set in .npmrc)
+# claude code lives here instead of devbox so it can auto-update
+npm install -g @anthropic-ai/claude-code
 
 
 

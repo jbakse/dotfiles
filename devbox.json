@@ -10,7 +10,6 @@
     "deno@latest",
     "fd@latest",
     "ncdu@latest",
-    "github:sadjow/claude-code-nix",
     "nodejs@24",
     "gh@latest"
   ],
