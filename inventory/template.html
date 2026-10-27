@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mac Software Inventory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one working column — summary strip, filter bar, sortable table; detail opens in a right-side drawer (bottom sheet on phones). */
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --ink: #1b2230; --muted: #5f6b7d; --line: #e1e5ec; --hover: #eef2f8;
+  --accent: #2f5bd3; --accent-soft: #e4ebfc;
+  --good: #1f8a5b; --good-soft: #dff3ea; --warn: #b26b00; --warn-soft: #fbefd9; --bad: #c2412d; --bad-soft: #fbe3de; --idle: #8a94a6; --idle-soft: #eceff4;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Instrument Sans", -apple-system, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --shadow: 0 12px 40px rgba(20, 30, 50, .18);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12151b; --panel: #1a1e26; --ink: #e6e9ef; --muted: #98a2b3; --line: #2a303b; --hover: #222834;
+  --accent: #7d9cf5; --accent-soft: #232d48;
+  --good: #4cc38a; --good-soft: #17322a; --warn: #e6a23c; --warn-soft: #3a2c14; --bad: #f07a63; --bad-soft: #3d1f1a; --idle: #7c8698; --idle-soft: #252a33;
+  --shadow: 0 12px 40px rgba(0, 0, 0, .5); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12151b; --panel: #1a1e26; --ink: #e6e9ef; --muted: #98a2b3; --line: #2a303b; --hover: #222834;
+  --accent: #7d9cf5; --accent-soft: #232d48;
+  --good: #4cc38a; --good-soft: #17322a; --warn: #e6a23c; --warn-soft: #3a2c14; --bad: #f07a63; --bad-soft: #3d1f1a; --idle: #7c8698; --idle-soft: #252a33;
+  --shadow: 0 12px 40px rgba(0, 0, 0, .5); color-scheme: dark }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 14px; line-height: 1.45; }
+.wrap { max-width: 1680px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 22px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(26px, 4vw, 36px); letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 4px 0 0; max-width: 70ch; }
+.mono { font-family: var(--mono); font-size: 12.5px; }
+
+/* summary */
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.stat:hover { border-color: var(--accent); }
+.stat .n { font-family: var(--display); font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat .l { color: var(--muted); font-size: 12.5px; }
+.stat.good .n { color: var(--good); } .stat.warn .n { color: var(--warn); } .stat.bad .n { color: var(--bad); }
+.bar { display: grid; gap: 8px; }
+.bar-track { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--line); }
+.bar-track span { display: block; height: 100%; cursor: pointer; border-right: 2px solid var(--bg); }
+.bar-track span:last-child { border-right: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--muted); }
+.legend button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.legend button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.legend b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* filters */
+.filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: var(--bg); padding-block: 10px; border-bottom: 1px solid var(--line); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.search { flex: 1 1 220px; min-width: 0; position: relative; }
+.search input { width: 100%; box-sizing: border-box; padding: 8px 10px 8px 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); font: inherit; }
+.search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+.seg button { font: inherit; border: 0; background: none; color: var(--muted); padding: 7px 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+select { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); }
+.count { color: var(--muted); font-size: 12.5px; margin-left: auto; font-variant-numeric: tabular-nums; }
+.clear { font: inherit; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 4px; }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* table */
+.table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; min-width: 700px; }
+td:first-child { min-width: 170px; }
+th { text-align: left; font-weight: 600; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; user-select: none; }
+th[data-k] { cursor: pointer; }
+th[data-k]:hover { color: var(--ink); }
+th .arr { opacity: .35; margin-left: 4px; }
+th.sorted { color: var(--ink); } th.sorted .arr { opacity: 1; color: var(--accent); }
+td { padding: 8px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+tbody tr { cursor: pointer; }
+tbody tr:hover, tbody tr:focus-visible { background: var(--hover); outline: none; }
+tbody tr.sel { background: var(--accent-soft); }
+.nm { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ico { width: 28px; height: 28px; flex: none; border-radius: 6px; display: grid; place-items: center; }
+.ico img { width: 28px; height: 28px; }
+.ico.glyph { background: var(--idle-soft); color: var(--muted); font-family: var(--mono); font-size: 11px; font-weight: 500; }
+.nm b { font-weight: 600; } .nm small { display: block; color: var(--muted); font-size: 12px; }
+.pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.pill i { width: 7px; height: 7px; border-radius: 50%; }
+.ver { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+.st-current { background: var(--good-soft); color: var(--good); }
+.st-patch { background: var(--idle-soft); color: var(--muted); }
+.st-minor { background: var(--warn-soft); color: var(--warn); }
+.st-major { background: var(--bad-soft); color: var(--bad); }
+.st-unknown { background: transparent; color: var(--idle); padding-left: 0; }
+.use { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.use .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: 1px; }
+.u-hot .dot { background: var(--good); } .u-warm .dot { background: var(--accent); } .u-cool .dot { background: var(--warn); } .u-cold .dot { background: var(--bad); } .u-none .dot { background: var(--line); }
+.u-none { color: var(--muted); }
+.live { font-size: 11px; color: var(--good); font-weight: 600; margin-left: 6px; }
+.track { font-size: 14px; margin-left: 4px; } .track.y { color: var(--good); } .track.n { color: var(--bad); }
+.empty { padding: 40px; text-align: center; color: var(--muted); }
+.note { color: var(--muted); font-size: 12.5px; max-width: 90ch; }
+
+/* drawer */
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 30%); gap: 20px; align-items: start; }
+.split > * { min-width: 0; }
+.drawer { position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); max-height: calc(100vh - 32px - env(safe-area-inset-top, 0px)); overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px 24px; box-sizing: border-box; display: grid; gap: 18px; align-content: start; }
+@media (max-width: 960px) { .split { grid-template-columns: 1fr; } .drawer { position: static; max-height: none; } }
+.dh { display: flex; gap: 14px; align-items: center; }
+.dh .big { width: 64px; height: 64px; flex: none; border-radius: 14px; display: grid; place-items: center; }
+.dh .big img { width: 64px; height: 64px; }
+.dh .big.glyph { background: var(--idle-soft); font-family: var(--mono); font-size: 18px; color: var(--muted); }
+.dh h2 { font-family: var(--display); font-size: 22px; margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
+.dh .kind { color: var(--muted); font-size: 12.5px; }
+.desc { margin: 0; font-size: 14.5px; }
+.tip { background: var(--accent-soft); color: var(--ink); border-radius: 8px; padding: 10px 12px; font-size: 13px; overflow-wrap: anywhere; }
+.tip strong { color: var(--accent); display: block; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 2px; }
+dl { display: grid; grid-template-columns: 120px 1fr; gap: 8px 12px; margin: 0; }
+dt { color: var(--muted); font-size: 12.5px; padding-top: 1px; }
+dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.verbox { display: grid; grid-template-columns: 1fr 1fr 1.3fr; border: 1px solid var(--line); border-radius: 8px; }
+.verbox > div { padding: 8px 10px; min-width: 0; display: grid; gap: 3px; align-content: start; }
+.verbox > div + div { border-left: 1px solid var(--line); }
+.verbox > div > span:first-child { font-size: 11px; color: var(--muted); letter-spacing: .05em; text-transform: uppercase; }
+.verbox b { font-family: var(--mono); font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.verbox small { color: var(--muted); font-size: 11.5px; line-height: 1.3; }
+.verbox .pill { justify-self: start; }
+.tip .mrow { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-bottom: 6px; }
+.norecs { border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; color: var(--muted); font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.norecs i { font-style: normal; color: var(--good); font-weight: 700; }
+details.sect { display: block; }
+details.sect > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 2px 0; }
+details.sect > summary::-webkit-details-marker { display: none; }
+details.sect > summary::before { content: "▸"; margin-right: 6px; transition: transform .15s; }
+details.sect[open] > summary::before { transform: rotate(90deg); }
+details.sect > summary .lbl { margin-right: auto; }
+details.sect > summary b { color: var(--ink); font-family: var(--mono); letter-spacing: 0; font-weight: 500; text-transform: none; font-size: 13px; }
+details.sect[open] > .parts { margin-top: 10px; }
+details.sect > .note { margin: 8px 0 0; }
+.copy { font: inherit; font-size: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--accent); border-radius: 6px; padding: 2px 8px; cursor: pointer; margin-left: 6px; }
+a { color: var(--accent); }
+.disk { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.disk .db { display: block; height: 3px; border-radius: 2px; background: var(--accent); opacity: .55; margin-top: 3px; margin-left: auto; }
+th.r { text-align: right; }
+.rc { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 600; padding: 0 6px; border-radius: 999px; vertical-align: 1px; }
+.lv-high { background: var(--bad-soft); color: var(--bad); } .lv-medium { background: var(--warn-soft); color: var(--warn); } .lv-low { background: var(--idle-soft); color: var(--muted); }
+.sect { display: grid; gap: 10px; }
+.sect h3 { margin: 0; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
+.sect h3 b { color: var(--ink); font-family: var(--mono); letter-spacing: 0; font-weight: 500; text-transform: none; font-size: 13px; }
+.parts { display: grid; gap: 7px; }
+.part { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 12.5px; }
+.part .pl { min-width: 0; overflow-wrap: anywhere; }
+.part .pl small { display: block; color: var(--muted); font-family: var(--mono); font-size: 11px; }
+.part .ps { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.part .pb { grid-column: 1 / -1; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.part .pb i { display: block; height: 100%; background: var(--accent); }
+.recs { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.rec { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 4px; }
+.rec .rt { display: flex; gap: 8px; align-items: baseline; font-weight: 600; }
+.rec .rt .rc { margin: 0; text-transform: capitalize; flex: none; }
+.rec p { margin: 0; color: var(--muted); font-size: 13px; }
+.cmd { display: flex; gap: 6px; align-items: flex-start; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.cmd code { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.cmd .copy { margin: 0; flex: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Mac Software Inventory</h1>
+    <p class="sub">Everything installed outside of stock macOS on this Mac: how each item got here, whether your dotfiles would bring it back, how much disk it uses, and what to clean up. Snapshot taken <span id="gen"></span>.</p>
+  </header>
+
+  <section class="summary" id="stats"></section>
+
+  <section class="bar" aria-label="Install methods">
+    <div class="bar-track" id="bar"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <div class="filters">
+    <label class="search"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <input id="q" type="search" placeholder="Search name, description, path…" aria-label="Search"></label>
+    <div class="seg" id="kind" role="group" aria-label="Kind">
+      <button data-v="all" aria-pressed="true">All</button><button data-v="App" aria-pressed="false">Apps</button><button data-v="CLI" aria-pressed="false">CLI</button><button data-v="Leftover" aria-pressed="false">Leftovers</button>
+    </div>
+    <select id="method" aria-label="Install method"><option value="">Any install method</option></select>
+    <select id="status" aria-label="Version status">
+      <option value="">Any version status</option><option value="behind">Out of date (any)</option><option value="major">Major version behind</option><option value="minor">Minor version behind</option><option value="patch">Patch behind</option><option value="current">Current</option><option value="unknown">Unknown</option>
+    </select>
+    <select id="usage" aria-label="Last used">
+      <option value="">Any last use</option><option value="hot">Used in last 7 days</option><option value="warm">8–30 days ago</option><option value="cool">31–90 days ago</option><option value="cold">Over 90 days ago</option><option value="none">No usage record</option><option value="stale">Not used in 90 days (incl. no record)</option>
+    </select>
+    <select id="tracked" aria-label="Tracked in dotfiles">
+      <option value="">Tracked or not</option><option value="y">Tracked in dotfiles</option><option value="n">Not tracked</option>
+    </select>
+    <select id="recs" aria-label="Recommendations">
+      <option value="">Any recommendations</option><option value="any">Has recommendations</option><option value="high">Has high-priority recommendations</option>
+    </select>
+    <button class="clear" id="clear" hidden>Clear filters</button>
+    <span class="count" id="count"></span>
+  </div>
+
+  <div class="split">
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th data-k="name">Name<span class="arr">↕</span></th>
+        <th data-k="method">Installed via<span class="arr">↕</span></th>
+        <th data-k="version">Version<span class="arr">↕</span></th>
+        <th data-k="status">Status<span class="arr">↕</span></th>
+        <th data-k="last_used">Last used<span class="arr">↕</span></th>
+        <th data-k="uses">Opens<span class="arr">↕</span></th>
+        <th data-k="disk" class="r">Disk<span class="arr">↕</span></th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty" hidden>No software matches these filters.</div>
+  </div>
+  <aside class="drawer" id="drawer" aria-label="Details" aria-live="polite"></aside>
+  </div>
+
+  <p class="note">Disk usage adds each app bundle to the files it keeps in ~/Library (Application Support, Caches, Containers, Group Containers, preferences, logs) and known data folders such as ~/.cache, ~/.lucid and ~/.codex. Devbox packages show their Nix closure, which overlaps between packages; the total above leaves them out and counts the Nix store once. Last-used dates for apps come from Spotlight's launch records, which miss apps that start at login or run from the menu bar. CLI usage comes from zsh history, which only covers May 26 to Oct 7. "Latest" versions come from the Homebrew catalog, npm and the App Store. Apps that update themselves may report a newer version than Homebrew recorded at install.</p>
+</div>
+
+
+<script>
+const DATA = __DATA__;
+const TODAY = new Date(DATA.generated + 'T12:00:00');
+const METHODS = {
+  'Brewfile': ['var(--good)', 'Homebrew, listed in your Brewfile'],
+  'devbox (Nix)': ['#3aa3a0', 'devbox global, listed in devbox.json'],
+  'dotfiles script': ['#6c8f3a', 'Script in ~/dotfiles/bin'],
+  'Homebrew (untracked)': ['var(--warn)', 'Installed with brew but not in the Brewfile'],
+  'npm global': ['#c25b9a', 'npm install -g, not recorded anywhere'],
+  'curl installer': ['#9a6ad1', 'Installed by a curl | sh script or manual binary'],
+  'Direct download': ['var(--bad)', 'Downloaded from a website'],
+  'App Store': ['var(--accent)', 'Mac App Store'],
+  'Vendor installer': ['#7f8aa0', "Installed by the vendor's .pkg"],
+  'Bundled with app': ['#a7b0bf', 'Command-line tool shipped inside an app'],
+  'Built locally': ['#b9a27a', 'No signature or download record'],
+  'Auto-created': ['#c5cbd6', 'Created by another app'],
+  'Leftover data': ['#8c6f5a', 'Caches and data with no installed owner'],
+};
+const ORDER = Object.keys(METHODS);
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function parts(v) { return String(v || '').replace(/^v/, '').split(/[^0-9]+/).filter(Boolean).map(Number); }
+function status(it) {
+  if (!it.version || !it.latest) return 'unknown';
+  const a = parts(it.version), b = parts(it.latest);
+  if (!a.length || !b.length) return 'unknown';
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] || 0, y = b[i] || 0;
+    if (x > y) return 'current';
+    if (x < y) return i === 0 ? 'major' : i === 1 ? 'minor' : 'patch';
+  }
+  return 'current';
+}
+const ST = { current: ['Current', 0], patch: ['Patch behind', 1], minor: ['Minor behind', 2], major: ['Major behind', 3], unknown: ['Unknown', -1] };
+function gapText(it) {
+  const s = status(it);
+  if (s === 'unknown') return 'No reliable latest version to compare against.';
+  if (s === 'current') return 'Up to date.';
+  const a = parts(it.version), b = parts(it.latest);
+  if (s === 'major') return `${b[0] - a[0]} major version${b[0] - a[0] > 1 ? 's' : ''} behind (${a[0]} → ${b[0]}).`;
+  if (s === 'minor') return `${b[1] - a[1]} minor release${b[1] - a[1] > 1 ? 's' : ''} behind within ${a[0]}.x.`;
+  return 'Behind by a patch release.';
+}
+function days(it) { return it.last_used ? Math.max(0, Math.round((TODAY - new Date(it.last_used + 'T12:00:00')) / 864e5)) : null; }
+function bucket(it) { const d = days(it); return d == null ? 'none' : d <= 7 ? 'hot' : d <= 30 ? 'warm' : d <= 90 ? 'cool' : 'cold'; }
+function ago(it) {
+  const d = days(it); if (d == null) return 'No record';
+  return d === 0 ? 'Today' : d === 1 ? 'Yesterday' : d < 60 ? `${d} days ago` : `${Math.round(d / 30)} months ago`;
+}
+DATA.items.forEach((it, i) => { it.i = i; it.st = status(it); it.bk = bucket(it); });
+
+const state = { q: '', kind: 'all', method: '', status: '', usage: '', tracked: '', recs: '', sort: 'name', dir: 1, sel: null };
+try { Object.assign(state, JSON.parse(localStorage.getItem('inv-state') || '{}'), { sel: null }); } catch (e) {}
+function save() { try { localStorage.setItem('inv-state', JSON.stringify(state)); } catch (e) {} }
+
+function iconHtml(it, cls) {
+  if (it.icon) return `<span class="${cls}"><img src="${it.icon}" alt=""></span>`;
+  const g = it.kind === 'Font' ? 'Aa' : it.kind === 'Leftover' ? '≋' : '>_';
+  return `<span class="${cls} glyph">${g}</span>`;
+}
+const KINDS = { App: 'App', CLI: 'Command line', Font: 'Font', Leftover: 'Leftover data' };
+function fmt(b) { return b >= 1e9 ? (b / 1e9).toFixed(1) + ' GB' : b >= 1e6 ? Math.round(b / 1e6) + ' MB' : Math.max(1, Math.round(b / 1e3)) + ' KB'; }
+const MAXDISK = Math.max(...DATA.items.map(i => i.disk || 0));
+function recBadge(it) {
+  if (!it.recs.length) return '';
+  const lv = ['high', 'medium', 'low'].find(l => it.recs.some(r => r.level === l));
+  return `<span class="rc lv-${lv}" title="Recommendations">${it.recs.length} tip${it.recs.length > 1 ? 's' : ''}</span>`;
+}
+function methodPill(m) { const c = METHODS[m]?.[0] || 'var(--idle)'; return `<span class="pill" style="background:color-mix(in srgb, ${c} 14%, transparent);color:${c}"><i style="background:${c}"></i>${esc(m)}</span>`; }
+function stPill(it, short) { const l = short && it.st !== 'current' && it.st !== 'unknown' ? ST[it.st][0].split(' ')[0] : ST[it.st][0]; return `<span class="pill st-${it.st}" title="${ST[it.st][0]}">${l}${it.st !== 'current' && it.st !== 'unknown' ? (short ? ' → ' : ' · ') + esc(it.latest) : ''}</span>`; }
+
+function renderSummary() {
+  const all = DATA.items, n = all.length;
+  const tracked = all.filter(i => i.tracked).length;
+  const behind = all.filter(i => ['major', 'minor'].includes(i.st)).length;
+  const cold = all.filter(i => i.kind === 'App' && (i.bk === 'cold' || i.bk === 'none') && !i.running).length;
+  const diskTotal = all.filter(i => i.method !== 'devbox (Nix)').reduce((s, i) => s + (i.disk || 0), 0);
+  const highRecs = all.filter(i => i.recs.some(r => r.level === 'high')).length;
+  const untrackedBrew = all.filter(i => i.method === 'Homebrew (untracked)').length;
+  const tiles = [
+    ['', `${n}`, `items · ${all.filter(i => i.kind === 'App').length} apps, ${all.filter(i => i.kind === 'CLI' || i.kind === 'Font').length} CLI tools, ${all.filter(i => i.kind === 'Leftover').length} leftovers`, {}],
+    ['good', `${Math.round(tracked / n * 100)}%`, `tracked in dotfiles (${tracked} of ${n})`, { tracked: 'y' }],
+    ['warn', `${untrackedBrew}`, 'installed with brew but missing from the Brewfile', { method: 'Homebrew (untracked)' }],
+    ['bad', `${behind}`, 'a minor or major version behind', { status: 'behind' }],
+    ['', `${cold}`, 'apps with no recorded use in 90 days', { kind: 'App', usage: 'stale' }],
+    ['', fmt(diskTotal), 'disk used, counting app data and caches', { sort: 'disk', dir: -1 }],
+    ['bad', `${highRecs}`, 'items with high-priority cleanup steps', { recs: 'high', sort: 'disk', dir: -1 }],
+  ];
+  $('#stats').innerHTML = tiles.map((t, i) => `<button class="stat ${t[0]}" data-i="${i}"><span class="n">${t[1]}</span><span class="l">${t[2]}</span></button>`).join('');
+  $('#stats').querySelectorAll('button').forEach(b => b.onclick = () => {
+    const f = tiles[b.dataset.i][3];
+    Object.assign(state, { q: '', kind: 'all', method: '', status: '', usage: '', tracked: '', recs: '' }, f);
+    sync(); render(); document.querySelector('.table-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  const counts = ORDER.map(m => [m, all.filter(i => i.method === m).length]).filter(x => x[1]);
+  $('#bar').innerHTML = counts.map(([m, c]) => `<span title="${esc(m)}: ${c}" data-m="${esc(m)}" style="width:${c / n * 100}%;background:${METHODS[m][0]}"></span>`).join('');
+  $('#legend').innerHTML = counts.map(([m, c]) => `<button data-m="${esc(m)}" title="${esc(METHODS[m][1])}"><i style="background:${METHODS[m][0]}"></i>${esc(m)} <b>${c}</b></button>`).join('');
+  document.querySelectorAll('[data-m]').forEach(el => el.onclick = () => { state.method = state.method === el.dataset.m ? '' : el.dataset.m; sync(); render(); });
+  $('#method').innerHTML = '<option value="">Any install method</option>' + counts.map(([m, c]) => `<option value="${esc(m)}">${esc(m)} (${c})</option>`).join('');
+}
+
+function filtered() {
+  const q = state.q.trim().toLowerCase();
+  return DATA.items.filter(it => {
+    if (state.kind !== 'all' && (state.kind === 'CLI' ? (it.kind !== 'CLI' && it.kind !== 'Font') : it.kind !== state.kind)) return false;
+    if (state.recs === 'any' && !it.recs.length) return false;
+    if (state.recs === 'high' && !it.recs.some(r => r.level === 'high')) return false;
+    if (state.method && it.method !== state.method) return false;
+    if (state.status === 'behind' ? !['major', 'minor', 'patch'].includes(it.st) : state.status && it.st !== state.status) return false;
+    if (state.usage === 'stale' ? !((it.bk === 'cold' || it.bk === 'none') && !it.running) : state.usage && it.bk !== state.usage) return false;
+    if (state.tracked && (state.tracked === 'y') !== it.tracked) return false;
+    if (q && ![it.name, it.desc, it.path, it.method, it.cask, it.id].join(' ').toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function sortKey(it, k) {
+  switch (k) {
+    case 'name': return it.name.toLowerCase();
+    case 'method': return ORDER.indexOf(it.method);
+    case 'tracked': return it.tracked ? 0 : 1;
+    case 'version': return it.version ? parts(it.version).map(n => String(n).padStart(8, '0')).join('.') : '';
+    case 'status': return ST[it.st][1];
+    case 'last_used': return it.running ? 1e9 : (it.last_used ? -days(it) : -1e9);
+    case 'uses': return it.uses ?? -1;
+    case 'disk': return it.disk ?? -1;
+  }
+}
+function render() {
+  save();
+  const list = filtered().sort((a, b) => { const x = sortKey(a, state.sort), y = sortKey(b, state.sort); return (x < y ? -1 : x > y ? 1 : a.name.localeCompare(b.name)) * state.dir; });
+  $('#rows').innerHTML = list.map(it => `<tr tabindex="0" data-i="${it.i}" class="${state.sel === it.i ? 'sel' : ''}">
+    <td><div class="nm">${iconHtml(it, 'ico')}<div><b>${esc(it.name)}</b><small>${KINDS[it.kind]}${recBadge(it)}</small></div></div></td>
+    <td>${methodPill(it.method)}${it.tracked ? '<span class="track y" title="Tracked in dotfiles"> ✓</span>' : ''}</td>
+    <td class="ver">${esc(it.version || '—')}</td>
+    <td>${stPill(it, true)}</td>
+    <td class="use u-${it.bk}"><span class="dot"></span>${ago(it)}${it.running ? '<span class="live">RUNNING</span>' : ''}</td>
+    <td class="use mono">${it.uses ?? '—'}</td>
+    <td class="disk mono">${it.disk ? fmt(it.disk) + `<span class="db" style="width:${Math.max(2, Math.sqrt(it.disk / MAXDISK) * 70)}px"></span>` : '—'}</td></tr>`).join('');
+  $('#empty').hidden = list.length > 0;
+  $('#count').textContent = `${list.length} of ${DATA.items.length}`;
+  const active = state.q || state.kind !== 'all' || state.method || state.status || state.usage || state.tracked || state.recs;
+  $('#clear').hidden = !active;
+  document.querySelectorAll('th[data-k]').forEach(th => { const on = th.dataset.k === state.sort; th.classList.toggle('sorted', on); th.querySelector('.arr').textContent = on ? (state.dir > 0 ? '↑' : '↓') : '↕'; });
+  $('#rows').querySelectorAll('tr').forEach(tr => { tr.onclick = () => open(+tr.dataset.i); tr.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(+tr.dataset.i); } }; });
+}
+function sync() {
+  $('#q').value = state.q; $('#method').value = state.method; $('#status').value = state.status;
+  $('#usage').value = state.usage; $('#tracked').value = state.tracked; $('#recs').value = state.recs;
+  document.querySelectorAll('#kind button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === state.kind));
+}
+
+function row(label, val) { return val == null || val === '' ? '' : `<dt>${label}</dt><dd>${val}</dd>`; }
+function open(i) {
+  const it = DATA.items[i]; state.sel = i; render();
+  const d = $('#drawer');
+  const lastUse = it.last_used ? `${esc(it.last_used)} <span style="color:var(--muted)">(${ago(it).toLowerCase()})</span>` : (it.running ? 'Running now. No launch record, which usually means it starts at login.' : 'No record');
+  d.innerHTML = `
+    <div class="dh">${iconHtml(it, 'big')}<div><h2>${esc(it.name)}</h2><div class="kind">${{ App: 'Application', Font: 'Font family', CLI: 'Command-line tool', Leftover: 'Leftover data' }[it.kind]}${it.running ? ' · <span style="color:var(--good);font-weight:600">running</span>' : ''}</div></div></div>
+    <p class="desc">${esc(it.desc)}</p>
+    <div class="verbox">
+      <div><span>Installed</span><b>${esc(it.version || '—')}</b></div>
+      <div><span>Latest</span><b>${esc(it.latest || '—')}</b>${it.latest_source ? `<small>${esc(it.latest_source)}</small>` : ''}</div>
+      <div><span>Status</span>${stPill(it)}<small>${gapText(it)}</small></div>
+    </div>
+    <div class="tip"><strong>How it's managed</strong><div class="mrow">${methodPill(it.method)}${it.tracked ? `<span style="color:var(--good);font-size:12.5px">✓ In dotfiles${it.tracked_via ? ' (' + esc(it.tracked_via) + ')' : ''}</span>` : '<span style="color:var(--bad);font-size:12.5px">Not in dotfiles</span>'}</div>${it.tip ? esc(it.tip) : esc(METHODS[it.method]?.[1] || '')}</div>
+    ${recsHtml(it)}
+    ${diskHtml(it)}
+    <dl>
+      ${row('Location', `<span class="mono">${esc(it.path)}</span><button class="copy" data-c="${esc(it.path)}">Copy</button>`)}
+      ${row('Bundle ID', it.id ? `<span class="mono">${esc(it.id)}</span>` : '')}
+      ${row('Homebrew cask', it.cask ? `<span class="mono">${esc(it.cask)}</span>` : '')}
+      ${row('Installer pkg', it.pkg ? `<span class="mono">${esc(it.pkg)}</span>` : '')}
+      ${row('Downloaded with', it.source ? esc(it.source) : '')}
+      ${row('Self-updates', it.updater && it.updater.length ? esc(it.updater.join(', ')) : '')}
+      ${row('Last used', lastUse)}
+      ${row(it.kind === 'App' ? 'Times opened' : 'Times run', it.uses != null ? `<span class="mono">${it.uses}</span>` : '')}
+      ${row('Usage source', it.usage_source ? esc(it.usage_source) : '')}
+      ${row('Added', it.added ? esc(it.added) : '')}
+      ${row('Website', it.homepage ? `<a href="${esc(it.homepage)}" target="_blank" rel="noopener">${esc(it.homepage.replace(/^https?:\/\//, '').replace(/\/$/, ''))}</a>` : '')}
+    </dl>`;
+  d.scrollTop = 0;
+  $('#diskd')?.addEventListener('toggle', e => { diskOpen = e.target.open; });
+  d.querySelectorAll('.copy').forEach(b => b.onclick = () => {
+    navigator.clipboard.writeText(b.dataset.c).then(() => { b.textContent = 'Copied'; }).catch(() => { const r = document.createRange(); r.selectNodeContents(b.previousElementSibling); getSelection().removeAllRanges(); getSelection().addRange(r); });
+  });
+}
+function recsHtml(it) {
+  if (!it.recs.length) return `<div class="sect"><h3>Recommendations</h3><div class="norecs"><i>✓</i>No recommendations. Nothing to clean up here.</div></div>`;
+  return `<div class="sect"><h3>Recommendations <b>${it.recs.length}</b></h3><ul class="recs">${it.recs.map(r => `<li class="rec">
+    <div class="rt"><span class="rc lv-${r.level}">${r.level}</span><span>${esc(r.title)}</span></div>
+    ${r.detail ? `<p>${esc(r.detail)}</p>` : ''}
+    ${r.cmd ? `<div class="cmd"><code>${esc(r.cmd)}</code><button class="copy" data-c="${esc(r.cmd)}">Copy</button></div>` : ''}</li>`).join('')}</ul></div>`;
+}
+let diskOpen = false;
+function diskHtml(it) {
+  if (!it.disk) return `<div class="sect"><h3>Disk usage <b>—</b></h3></div>`;
+  const max = it.disk_parts[0]?.bytes || 1;
+  return `<details class="sect" id="diskd"${diskOpen ? ' open' : ''}><summary><span class="lbl">Disk usage</span><b>${fmt(it.disk)}</b></summary><div class="parts">${it.disk_parts.slice(0, 12).map(p => `<div class="part">
+    <span class="pl">${esc(p.label === p.path ? p.path.split('/').pop() : p.label)}<small>${esc(p.path)}</small></span><span class="ps">${fmt(p.bytes)}</span>
+    <span class="pb"><i style="width:${p.bytes / max * 100}%"></i></span></div>`).join('')}
+    ${it.disk_parts.length > 12 ? `<p class="note">and ${it.disk_parts.length - 12} smaller items</p>` : ''}</div>
+    ${it.disk_note ? `<p class="note">${esc(it.disk_note)}</p>` : ''}</details>`;
+}
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, select') || e.metaKey || e.ctrlKey) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    const trs = [...document.querySelectorAll('#rows tr')]; const k = trs.findIndex(t => +t.dataset.i === state.sel);
+    const n = trs[k + (e.key === 'ArrowDown' ? 1 : -1)]; if (n) { e.preventDefault(); open(+n.dataset.i); document.querySelector('tr.sel')?.scrollIntoView({ block: 'nearest' }); }
+  }
+});
+$('#q').oninput = e => { state.q = e.target.value; render(); };
+$('#method').onchange = e => { state.method = e.target.value; render(); };
+$('#status').onchange = e => { state.status = e.target.value; render(); };
+$('#usage').onchange = e => { state.usage = e.target.value; render(); };
+$('#tracked').onchange = e => { state.tracked = e.target.value; render(); };
+$('#recs').onchange = e => { state.recs = e.target.value; render(); };
+document.querySelectorAll('#kind button').forEach(b => b.onclick = () => { state.kind = b.dataset.v; sync(); render(); });
+$('#clear').onclick = () => { Object.assign(state, { q: '', kind: 'all', method: '', status: '', usage: '', tracked: '', recs: '' }); sync(); render(); };
+document.querySelectorAll('th[data-k]').forEach(th => th.onclick = () => { const k = th.dataset.k; state.dir = state.sort === k ? -state.dir : (k === 'name' || k === 'method' || k === 'tracked' ? 1 : -1); state.sort = k; render(); });
+$('#gen').textContent = TODAY.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+renderSummary(); sync(); render();
+{ const first = document.querySelector('#rows tr'); if (first) open(+first.dataset.i); }
+</script>
+</body>
+</html>
