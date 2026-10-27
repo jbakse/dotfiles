@@ -1,10 +1,8 @@
 tap "homebrew/bundle"
-tap "bakks/bakks"
-
-brew "bakks/bakks/butterfish"
 
 cask "1password"
-cask "cameracontroller"
+cask "chatgpt"
+cask "claude"
 cask "discord"
 cask "google-chrome"
 cask "iterm2"
@@ -15,15 +13,16 @@ cask "steam"
 cask "visual-studio-code"
 cask "zoom"
 cask "elgato-control-center"
-cask "anki"
 cask "affinity-photo"
 cask "affinity-designer"
 cask "affinity-publisher"
-cask "daisydisk"
 cask "appcleaner"
+cask "apparency"
 cask "font-monaspace-nerd-font"
 cask "monitorcontrol"
 
 
 
 
+cask "blender"
+cask "reflex-app"
