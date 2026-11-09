@@ -1,0 +1,121 @@
+#!/bin/zsh
+
+# repo-health-check
+# Finds git repos and reports anything that isn't safely saved elsewhere:
+#   - no remote at all
+#   - uncommitted changes (modified, staged, or untracked files)
+#   - local branches with commits that aren't on any remote
+#   - local branches with no upstream
+#   - stashes
+#   - .env files that git does NOT ignore (or, worse, that are tracked)
+# Lists repos with issues, then the repos that are all good, then a summary
+# (a clear "All good" when nothing is found). Read-only: changes nothing.
+#
+# usage: repo-health-check [dir ...]     (default: ~)
+
+set -u
+
+green="\033[32m"; red="\033[31m"; yellow="\033[33m"; cyan="\033[36m"
+bold="\033[1m"; dim="\033[2m"; reset="\033[0m"
+
+roots=("$@")
+(( ${#roots} )) || roots=("$HOME")
+
+# Find repos. Skip ~/Library, dependency folders, and hidden folders
+# (tool clones like ~/.oh-my-zsh live there), but not .git itself.
+find_repos() {
+  local root=$1
+  find "$root" \
+    \( -path "$HOME/Library" -o -name node_modules -o -name .venv \
+       -o \( -name '.*' -not -name .git -not -path "$root" \) \) -prune \
+    -o -type d -name .git -print -prune 2>/dev/null \
+    | sed 's#/\.git$##'
+}
+
+# .env-style files in a repo, excluding templates meant to be committed
+find_envs() {
+  find "$1" \( -name node_modules -o -name .git -o -name .venv \) -prune \
+    -o -type f -name '.env*' \
+       -not -iname '*example*' -not -iname '*sample*' -not -iname '*template*' \
+       -not -name '*.tpl' -not -name '*.dist' -print 2>/dev/null
+}
+
+repos=()
+for r in $roots; do
+  repos+=("${(@f)$(find_repos ${r:A})}")
+done
+repos=(${(u)repos:#})   # unique, drop empties
+
+total=${#repos}
+problem_repos=0
+problems=0
+clean=()
+
+for repo in ${(o)repos}; do
+  issues=()
+  name=${repo/#$HOME/\~}
+
+  if [[ -z "$(git -C $repo remote 2>/dev/null)" ]]; then
+    issues+=("${red}no remote${reset} — this disk is the only copy")
+  else
+    # local branches: no upstream, or ahead of upstream
+    while IFS=$'\t' read -r branch upstream track; do
+      [[ -z $branch ]] && continue
+      if [[ -z $upstream ]]; then
+        n=$(git -C $repo rev-list --count $branch --not --remotes 2>/dev/null)
+        if (( n > 0 )); then
+          issues+=("${yellow}branch ${bold}$branch${reset}${yellow} has no upstream${reset} ($n commit(s) not on any remote)")
+        fi
+      elif [[ $track == *gone* ]]; then
+        issues+=("${yellow}branch ${bold}$branch${reset}${yellow} tracks $upstream, which no longer exists${reset}")
+      elif [[ $track == *ahead* ]]; then
+        issues+=("${yellow}branch ${bold}$branch${reset}${yellow} unpushed${reset} $track")
+      fi
+    done < <(git -C $repo for-each-ref --format=$'%(refname:short)\t%(upstream:short)\t%(upstream:track)' refs/heads 2>/dev/null)
+  fi
+
+  changes=$(git -C $repo status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+  if (( changes > 0 )); then
+    issues+=("${yellow}uncommitted changes${reset} ($changes file(s))")
+  fi
+
+  stashes=$(git -C $repo stash list 2>/dev/null | wc -l | tr -d ' ')
+  if (( stashes > 0 )); then
+    issues+=("${yellow}$stashes stash(es)${reset}")
+  fi
+
+  for env in ${(f)"$(find_envs $repo)"}; do
+    [[ -z $env ]] && continue
+    rel=${env#$repo/}
+    if git -C $repo ls-files --error-unmatch -- $rel >/dev/null 2>&1; then
+      issues+=("${red}${rel} is TRACKED by git${reset} — secrets may be in history")
+    elif ! git -C $repo check-ignore -q -- $rel 2>/dev/null; then
+      issues+=("${red}${rel} is not gitignored${reset}")
+    fi
+  done
+
+  if (( ${#issues} )); then
+    (( problem_repos++ ))
+    (( problems += ${#issues} ))
+    echo -e "${bold}${cyan}$name${reset}"
+    for i in $issues; do echo -e "  • $i"; done
+    echo
+  else
+    clean+=("$name")
+  fi
+done
+
+if (( ${#clean} )); then
+  echo -e "${bold}${green}all good${reset}"
+  for c in $clean; do echo -e "  ${green}✓${reset} $c"; done
+  echo
+fi
+
+if (( total == 0 )); then
+  echo -e "${yellow}No git repos found under: ${roots[*]}${reset}"
+elif (( problem_repos == 0 )); then
+  echo -e "${green}${bold}✓ All good${reset} — $total repo(s) checked, nothing unsaved, no exposed .env files."
+else
+  echo -e "${bold}$problems issue(s) in $problem_repos of $total repos.${reset} ${green}${#clean} all good.${reset}"
+  exit 1
+fi

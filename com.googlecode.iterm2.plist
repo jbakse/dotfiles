@@ -59,7 +59,7 @@
 	<string>A73F9FFD-72F3-49B2-B2C7-E2AE8E257828</string>
 	<key>GlobalKeyMap</key>
 	<dict>
-		<key>0xd-0x20000-0x24</key>
+		<key>0xd-0x20000-0x24-0x1</key>
 		<dict>
 			<key>Action</key>
 			<integer>12</integer>
@@ -1052,7 +1052,7 @@
 					<key>Text</key>
 					<string>"0x1b 0x7f"</string>
 				</dict>
-				<key>0xf729-0x60000-0x73</key>
+				<key>0xf729-0x60000-0x73-0x1</key>
 				<dict>
 					<key>Action</key>
 					<integer>25</integer>
@@ -1066,7 +1066,7 @@ _zoomLeftAndRight:</string>
 					<key>Version</key>
 					<integer>2</integer>
 				</dict>
-				<key>0xf72b-0x60000-0x77</key>
+				<key>0xf72b-0x60000-0x77-0x1</key>
 				<dict>
 					<key>Action</key>
 					<integer>25</integer>
