@@ -24,7 +24,9 @@ mkdir -p ~/.local/share/devbox/global/default
 ln -sf ~/dotfiles/devbox.json ~/.local/share/devbox/global/default/devbox.json
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
 ln -sf ~/dotfiles/.gitconfig ~/.gitconfig
-ln -sf ~/dotfiles/.npmrc ~/.npmrc
+ln -sf ~/dotfiles/finicky.js ~/.finicky.js
+# ~/.npmrc is NOT linked: it holds the npm auth token and must stay out of this
+# public repo. `npm login` creates it. The npm prefix is set in .zshrc instead.
 
 # install devbox global packages (no lock in dotfiles; gets latest)
 devbox global install
@@ -36,7 +38,7 @@ devbox global install
 cd dotfiles
 brew bundle install
 
-# install global npm tools (node comes from devbox; prefix set in .npmrc)
+# install global npm tools (node comes from devbox; prefix set by NPM_CONFIG_PREFIX in .zshrc)
 # claude code lives here instead of devbox so it can auto-update
 npm install -g @anthropic-ai/claude-code
 

@@ -35,6 +35,9 @@ alias gclean='git-clean-branches'
 #/ shell
 alias reload!='. ~/.zshrc'
 
+#/ npm - global installs go to ~/.npm (auth token lives in untracked ~/.npmrc)
+export NPM_CONFIG_PREFIX="$HOME/.npm"
+
 #/ PATH
 export PATH="$HOME/dotfiles/bin:$PATH"
 export PATH="$HOME/.npm/bin:$PATH"
@@ -64,6 +67,7 @@ echo
 echo -e " \033[1;36mscripts\033[0m"
 echo -e " \033[33mglog\033[0m           interactive git log with fzf"
 echo -e " \033[33mgclean\033[0m         delete branches merged into main"
+echo -e " \033[33mrepo-health-check\033[0m [dir] — unpushed/uncommitted work, missing remotes, exposed .env"
 echo -e " \033[33mshrink-grab\033[0m         re-encode .mov screen recordings to .mp4"
 echo -e " \033[33mscreenshot-watch\033[0m on|off|status|log [-f] — auto-compress ~/Screenshots videos"
 echo

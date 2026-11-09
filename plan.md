@@ -44,7 +44,7 @@ Working with Claude: "read plan.md, run inventory/refresh.sh and let's go throug
 - Casks that run a `.pkg` (docker-desktop, zoom, basictex) need `sudo`. Run them in a normal iTerm tab, not through Claude.
 - Taps now need trust: `brew trust --formula supabase/tap/supabase`, or Homebrew silently ignores the formula.
 - Prefer `brew uninstall --zap --cask X` or AppCleaner. Move personal data (saves, configs with keys) to the Trash instead of deleting it.
-- `.npmrc` holds an npm auth token. Never commit it. Move the token to `~/.npmrc.local` or `${NPM_TOKEN}`.
+- `~/.npmrc` holds the npm auth token. It's a plain untracked file (not a symlink), and `.npmrc` is gitignored here. The npm prefix comes from `NPM_CONFIG_PREFIX` in `.zshrc`.
 
 ## The report
 
@@ -62,7 +62,6 @@ Hand-written parts to review now and then:
 
 ## Open items (2026-10-27)
 
-- Move the npm token out of `.npmrc`.
 - USB Overdrive: update in-app to 5.4, then `brew install --cask --adopt usb-overdrive`.
 - Trust or untap `supabase/tap`.
 - Affinity 2 casks are deprecated. Affinity 3 is the free `affinity` cask.

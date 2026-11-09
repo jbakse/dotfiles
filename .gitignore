@@ -2,3 +2,5 @@
 .env
 
 reports/
+.npmrc
+NEW_DATA_INVENTORY.md
