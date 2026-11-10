@@ -1,4 +1,5 @@
 tap "homebrew/bundle"
+tap "kirahowe/tap"
 
 cask "1password"
 cask "chatgpt"
@@ -45,3 +46,4 @@ cask "openscad@snapshot"
 cask "usb-overdrive"
 cask "kopiaui"
 cask "cyberduck"
+cask "kirahowe/tap/editmd"
