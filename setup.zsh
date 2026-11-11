@@ -42,5 +42,13 @@ brew bundle install
 # claude code lives here instead of devbox so it can auto-update
 npm install -g @anthropic-ai/claude-code
 
+# install Python CLI tools with uv (uv comes from the Brewfile)
+# osxphotos has no Homebrew formula; it exports the Photos library for backups
+# update later with: uv tool upgrade --all
+uv tool install osxphotos
+
+# backups (weekly photos export + nightly Kopia to B2): connect KopiaUI to the
+# B2 repository first, then install the launchd jobs as described in backup/README.md
+
 
 

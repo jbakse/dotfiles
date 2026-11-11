@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Nightly Kopia snapshots to B2, 2:00 to 8:00. Install: see backup/README.md -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.jbakse.kopia-nightly</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/jbakse/dotfiles/backup/kopia-nightly.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>2</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>StandardOutPath</key>
+  <string>/Users/jbakse/Library/Logs/kopia-nightly.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/jbakse/Library/Logs/kopia-nightly.log</string>
+</dict>
+</plist>
